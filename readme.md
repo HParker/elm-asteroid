@@ -1,2 +1,2 @@
-Currently a work in progress. Expect updates.
-![current status](screenshots/astroid.png)
+Little asteroid clone
+![current status](screenshots/asteroid.png)
