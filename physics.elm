@@ -12,6 +12,18 @@ type alias Delta a =
 type alias Directional a =
   { a | angle : Float }
 
+type alias Sized a =
+  { a | size : Float }
+
+within : Float -> Float -> Float -> Bool
+within objo conto contsize =
+  objo < conto + contsize && objo > conto - contsize
+
+inside : PObject (Sized b) -> PObject a -> Bool
+inside container obj =
+  within obj.x container.x container.size && within obj.y container.y container.size
+
+
 move : PObject (Delta a) -> PObject (Delta a)
 move ({x, y, dx, dy} as obj) =
   { obj |

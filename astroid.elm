@@ -7,54 +7,57 @@ import Window
 import Physics
 import Random
 
+randSeed : Int
+randSeed = 1234
+
 type alias Board = {
-    height : Float,
-    width : Float
+    height : Float
+  , width : Float
   }
 
 
 type alias Bullet = {
-    x : Float,
-    y : Float,
-    dx : Float,
-    dy : Float,
-    expiration : Int
+    x : Float
+  , y : Float
+  , dx : Float
+  , dy : Float
+  , expiration : Int
   }
+
 
 type alias Astroid = {
-    x : Float,
-    y : Float,
-    dx : Float,
-    dy : Float,
-    angle : Float,
-    size : Float
+    x : Float
+  , y : Float
+  , dx : Float
+  , dy : Float
+  , angle : Float
+  , size : Float
   }
 
 
-type alias Ship =
-  {
-    x : Float,
-    y : Float,
-    dx : Float,
-    dy : Float,
-    angle : Float
+type alias Ship = {
+    x : Float
+  , y : Float
+  , dx : Float
+  , dy : Float
+  , angle : Float
   }
 
 
-type alias Game =
-  {
-    board : Board,
-    ship : Ship,
-    bullets : List Bullet,
-    astroids : List Astroid
+type alias Game = {
+    board : Board
+  , ship : Ship
+  , bullets : List Bullet
+  , astroids : List Astroid
+  , seed : Random.Seed
   }
 
 
-type alias Input =
-  { vertical : Int,
-    horizontal : Int,
-    fire : Bool,
-    delta : Time
+type alias Input = {
+    vertical : Int
+  , horizontal : Int
+  , fire : Bool
+  , delta : Time
   }
 
 
@@ -106,26 +109,73 @@ stepBullets input ({board, ship, bullets} as game) =
     List.map stepBullet (liveBullets newBullets)
 
 
-stepAstroid : Astroid -> Astroid
-stepAstroid astroid =
-  { astroid |
-      angle = astroid.angle + 0.05
+stepAstroid : Board -> Astroid -> Astroid
+stepAstroid board astroid =
+  astroid
+    |> Physics.overflow board
+    |> Physics.move
+    |> Physics.turn 0.05
+
+
+colided : List Bullet -> Astroid -> Bool
+colided bullets astroid =
+  List.any (Physics.inside astroid) bullets
+
+notColided : List Bullet -> Astroid -> Bool
+notColided bullets astroid =
+  not (colided bullets astroid)
+
+destroyAstroids : Game -> Game
+destroyAstroids ({bullets, astroids} as game) =
+  { game |
+      astroids = stepAstroids game.board (List.filter (notColided bullets) astroids)
   }
 
--- liveAstroids : Game -> List Astroid
--- liveAstroids ({bullets, astroids} as game) =
+
+generateAstroid : Game -> (Astroid, Random.Seed)
+generateAstroid game =
+  let
+    seed1 = game.seed
+    (x, seed2) = Debug.watch "randx" (Random.generate (Random.float (-game.board.width/2) (game.board.width/2)) seed1)
+    (y, seed3) = Debug.watch "randy" (Random.generate (Random.float (-game.board.height/2) (game.board.height/2)) seed2)
+    (dx, seed4) = Debug.watch "randdx" (Random.generate (Random.float -3 3) seed3)
+    (dy, seed5) = Debug.watch "randdy" (Random.generate (Random.float -3 3) seed4)
+  in
+    ((astroid x y dx dy), seed5)
 
 
-stepAstroids : Game -> List Astroid
-stepAstroids ({bullets, astroids} as game) =
-  List.map stepAstroid astroids
+generateAstroids : Game -> Game
+generateAstroids game =
+  let
+    (astroid, seed) = generateAstroid game
+    newAstroids =
+      if List.length game.astroids < 4 then
+        astroid :: game.astroids
+      else
+        game.astroids
+  in
+    { game |
+        astroids = newAstroids,
+        seed = seed
+    }
+
+
+astroidGeneration : Game -> Game
+astroidGeneration game =
+  destroyAstroids (generateAstroids game)
+
+stepAstroids : Board -> List Astroid -> List Astroid
+stepAstroids board astroids =
+      List.map (stepAstroid board) astroids
 
 step : Input -> Game -> Game
 step input game =
-  { game |
-      ship = stepShip input game,
-      bullets = stepBullets input game,
-      astroids = stepAstroids game
+  let
+    newGame = astroidGeneration game
+  in
+    { newGame |
+        ship = stepShip input game,
+        bullets = stepBullets input game
   }
 
 
@@ -203,20 +253,15 @@ bullets : List Bullet
 bullets = []
 
 
-astroid : Astroid
-astroid = Astroid
-          35
-          35
-          0
-          0
-          0
-          20
+astroid : Float -> Float -> Float -> Float -> Astroid
+astroid x y dx dy =
+  Astroid x y dx dy 0 20
 
 astroids : List Astroid
-astroids = [astroid]
+astroids = []
 
 startGame : Game
-startGame = Game skyscape startShip bullets astroids
+startGame = Game skyscape startShip bullets astroids (Random.initialSeed randSeed)
 
 -- INPUT
 
