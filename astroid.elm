@@ -25,7 +25,7 @@ type alias Bullet = {
   }
 
 
-type alias Astroid = {
+type alias Asteroid = {
     x : Float
   , y : Float
   , dx : Float
@@ -48,7 +48,7 @@ type alias Game = {
     board : Board
   , ship : Ship
   , bullets : List Bullet
-  , astroids : List Astroid
+  , asteroids : List Asteroid
   , seed : Random.Seed
   }
 
@@ -109,31 +109,31 @@ stepBullets input ({board, ship, bullets} as game) =
     List.map stepBullet (liveBullets newBullets)
 
 
-stepAstroid : Board -> Astroid -> Astroid
-stepAstroid board astroid =
-  astroid
+stepAsteroid : Board -> Asteroid -> Asteroid
+stepAsteroid board asteroid =
+  asteroid
     |> Physics.overflow board
     |> Physics.move
     |> Physics.turn 0.05
 
 
-colided : List Bullet -> Astroid -> Bool
-colided bullets astroid =
-  List.any (Physics.inside astroid) bullets
+colided : List Bullet -> Asteroid -> Bool
+colided bullets asteroid =
+  List.any (Physics.inside asteroid) bullets
 
-notColided : List Bullet -> Astroid -> Bool
-notColided bullets astroid =
-  not (colided bullets astroid)
+notColided : List Bullet -> Asteroid -> Bool
+notColided bullets asteroid =
+  not (colided bullets asteroid)
 
-destroyAstroids : Game -> Game
-destroyAstroids ({bullets, astroids} as game) =
+destroyAsteroids : Game -> Game
+destroyAsteroids ({bullets, asteroids} as game) =
   { game |
-      astroids = stepAstroids game.board (List.filter (notColided bullets) astroids)
+      asteroids = stepAsteroids game.board (List.filter (notColided bullets) asteroids)
   }
 
 
-generateAstroid : Game -> (Astroid, Random.Seed)
-generateAstroid game =
+generateAsteroid : Game -> (Asteroid, Random.Seed)
+generateAsteroid game =
   let
     seed1 = game.seed
     (x, seed2) = Debug.watch "randx" (Random.generate (Random.float (-game.board.width/2) (game.board.width/2)) seed1)
@@ -141,37 +141,37 @@ generateAstroid game =
     (dx, seed4) = Debug.watch "randdx" (Random.generate (Random.float -3 3) seed3)
     (dy, seed5) = Debug.watch "randdy" (Random.generate (Random.float -3 3) seed4)
   in
-    ((astroid x y dx dy), seed5)
+    ((asteroid x y dx dy), seed5)
 
 
-generateAstroids : Game -> Game
-generateAstroids game =
+generateAsteroids : Game -> Game
+generateAsteroids game =
   let
-    (astroid, seed) = generateAstroid game
-    newAstroids =
-      if List.length game.astroids < 4 then
-        astroid :: game.astroids
+    (asteroid, seed) = generateAsteroid game
+    newAsteroids =
+      if List.length game.asteroids < 4 then
+        asteroid :: game.asteroids
       else
-        game.astroids
+        game.asteroids
   in
     { game |
-        astroids = newAstroids,
+        asteroids = newAsteroids,
         seed = seed
     }
 
 
-astroidGeneration : Game -> Game
-astroidGeneration game =
-  destroyAstroids (generateAstroids game)
+asteroidGeneration : Game -> Game
+asteroidGeneration game =
+  destroyAsteroids (generateAsteroids game)
 
-stepAstroids : Board -> List Astroid -> List Astroid
-stepAstroids board astroids =
-      List.map (stepAstroid board) astroids
+stepAsteroids : Board -> List Asteroid -> List Asteroid
+stepAsteroids board asteroids =
+      List.map (stepAsteroid board) asteroids
 
 step : Input -> Game -> Game
 step input game =
   let
-    newGame = astroidGeneration game
+    newGame = asteroidGeneration game
   in
     { newGame |
         ship = stepShip input game,
@@ -201,17 +201,17 @@ shipShape ship =
     |> rotate (ship.angle)
 
 
-astroidShapes : List Astroid -> List Form
-astroidShapes astroids =
-  List.map astroidShape astroids
+asteroidShapes : List Asteroid -> List Form
+asteroidShapes asteroids =
+  List.map asteroidShape asteroids
 
 
-astroidShape : Astroid -> Form
-astroidShape astroid =
-  ngon 5 astroid.size
+asteroidShape : Asteroid -> Form
+asteroidShape asteroid =
+  ngon 5 asteroid.size
     |> outlined (solid white)
-    |> move (astroid.x, astroid.y)
-    |> rotate (astroid.angle)
+    |> move (asteroid.x, asteroid.y)
+    |> rotate (asteroid.angle)
 
 bulletShape : Bullet -> Form
 bulletShape bullet =
@@ -226,7 +226,7 @@ bulletShapes bullets =
 
 
 view : (Int, Int) -> Game -> Element
-view (w,h) ({board, ship, bullets, astroids} as game) =
+view (w,h) ({board, ship, bullets, asteroids} as game) =
   let
     elements =
       [
@@ -234,7 +234,7 @@ view (w,h) ({board, ship, bullets, astroids} as game) =
          shipShape ship
       ]
       `List.append` bulletShapes bullets
-      `List.append` astroidShapes astroids
+      `List.append` asteroidShapes asteroids
   in
     container w h middle <| collage (round board.width) (round board.height) elements
 
@@ -253,15 +253,15 @@ bullets : List Bullet
 bullets = []
 
 
-astroid : Float -> Float -> Float -> Float -> Astroid
-astroid x y dx dy =
-  Astroid x y dx dy 0 20
+asteroid : Float -> Float -> Float -> Float -> Asteroid
+asteroid x y dx dy =
+  Asteroid x y dx dy 0 20
 
-astroids : List Astroid
-astroids = []
+asteroids : List Asteroid
+asteroids = []
 
 startGame : Game
-startGame = Game skyscape startShip bullets astroids (Random.initialSeed randSeed)
+startGame = Game skyscape startShip bullets asteroids (Random.initialSeed randSeed)
 
 -- INPUT
 
